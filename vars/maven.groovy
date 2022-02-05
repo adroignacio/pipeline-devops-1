@@ -54,13 +54,14 @@ def jar(){
 }
 
 def sonar(){
-    withSonarQubeEnv(installationName: 'sonar-server') {
-        sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar'
-    }
+    sh "echo 'Análisis Estático!'"
+      withSonarQubeEnv('sonarqube') {
+          sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=ejemplo-gradle -Dsonar.java.binaries=build'
+      }
 }
 
 def runJar(){
-    sh 'nohup bash mvnw spring-boot:run &'
+    sh 'mvn spring-boot:run &'
     sleep 20
 }
 
@@ -69,15 +70,32 @@ def rest(){
 }
 
 def nexusCI(){
-    nexusPublisher nexusInstanceId: 'nexus', nexusRepositoryId: 'test-nexus', packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: 'jar', filePath: "build/DevOpsUsach2020-0.0.1.jar"]], mavenCoordinate: [artifactId: 'DevOpsUsach2020', groupId: 'com.devopsusach2020', packaging: 'jar', version: "0.0.1-${env.GIT_BRANCH}"]]]  
+          nexusPublisher nexusInstanceId: 'nexus',
+      nexusRepositoryId: 'devops-usach-nexus',
+      packages: [
+          [$class: 'MavenPackage',
+              mavenAssetList: [
+                  [classifier: '',
+                  extension: 'jar',
+                  filePath: 'build/DevOpsUsach2020-0.0.1.jar'
+              ]
+          ],
+              mavenCoordinate: [
+                  artifactId: 'DevOpsUsach2020',
+                  groupId: 'com.devopsusach2020',
+                  packaging: 'jar',
+                  version: '0.0.1'
+              ]
+          ]
+      ]
 }
 
 def downloadNexus(){
-    sh "curl -X GET -u admin:admin http://localhost:8081/repository/test-nexus/com/devopsusach2020/DevOpsUsach2020/0.0.1-develop/DevOpsUsach2020-0.0.1-develop.jar -O"
-}
+      sh ' curl -X GET -u $NEXUS_USER:$NEXUS_PASSWORD "http://nexus:8081/repository/devops-usach-nexus/com/devopsusach2020/DevOpsUsach2020/0.0.1/DevOpsUsach2020-0.0.1.jar" -O'
+  }
 
 def runDownloadedJar(){
-    sh "nohup java -jar DevOpsUsach2020-0.0.1-develop.jar &"
+    sh 'nohup bash java -jar DevOpsUsach2020-0.0.1.jar & >/dev/null'
     sleep 20
 }
 
