@@ -21,33 +21,52 @@ def call(String chosenStages){
 }
 
 def buildAndTest(){
-	sh './gradlew clean build'
+	sh "echo 'Build && Test!'"
+    sh "gradle clean build"
 }
 
 def sonar(){
-	def sonarhome = tool 'sonar-scanner'
-    sh "${sonarhome}/bin/sonar-scanner -Dsonar.projectKey=ejemplo-gradle -Dsonar.java.binaries=build"
-}
+	sh "echo 'Análisis Estático!'"
+        withSonarQubeEnv('sonarqube') {
+            sh './gradlew sonarqube -Dsonar.projectKey=ejemplo-gradle -Dsonar.java.binaries=build'
+        }
+		}
 
 def runJar(){
-	sh "nohup bash gradlew bootRun &"
+	sh "gradle bootRun&"
 	sleep 20
 }
 
 def rest(){
-	sh "curl -X GET http://localhost:8082/rest/mscovid/test?msg=testing"
+	sh "curl -X GET 'http://localhost:8081/rest/mscovid/test?msg=testing'"
 }
 
 def nexusCI(){
-    nexusPublisher nexusInstanceId: 'nexus', nexusRepositoryId: 'test-nexus', packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: 'jar', filePath: "build/DevOpsUsach2020-0.0.1.jar"]], mavenCoordinate: [artifactId: 'DevOpsUsach2020', groupId: 'com.devopsusach2020', packaging: 'jar', version: "0.0.1-${env.GIT_BRANCH}"]]]  
-}
+            nexusPublisher nexusInstanceId: 'nexus',
+        nexusRepositoryId: 'devops-usach-nexus',
+        packages: [
+            [$class: 'MavenPackage',
+                mavenAssetList: [
+                    [classifier: '',
+                    extension: 'jar',
+                    filePath: 'build/libs/DevOpsUsach2020-0.0.1.jar'
+                ]
+            ],
+                mavenCoordinate: [
+                    artifactId: 'DevOpsUsach2020',
+                    groupId: 'com.devopsusach2020',
+                    packaging: 'jar',
+                    version: '0.0.1'
+                ]
+            ]
+        ]}
 
 def downloadNexus(){
-    sh "curl -X GET -u admin:admin http://localhost:8081/repository/test-nexus/com/devopsusach2020/DevOpsUsach2020/0.0.1-develop/DevOpsUsach2020-0.0.1-develop.jar -O"
+    sh ' curl -X GET -u $NEXUS_USER:$NEXUS_PASSWORD "http://nexus:8081/repository/devops-usach-nexus/com/devopsusach2020/DevOpsUsach2020/0.0.1/DevOpsUsach2020-0.0.1.jar" -O'
 }
 
 def runDownloadedJar(){
-    sh "nohup java -jar DevOpsUsach2020-0.0.1-develop.jar &"
+    sh 'nohup bash java -jar DevOpsUsach2020-0.0.1.jar & >/dev/null'
     sleep 20
 }
 
